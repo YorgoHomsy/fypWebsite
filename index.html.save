@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECG & HRT Monitoring Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .nav-menu {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .nav-btn {
+            padding: 10px 20px;
+            border: 2px solid #007bff;
+            background: transparent;
+            color: #007bff;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover { background: #e7f1ff; }
+        .nav-btn.active { background: #007bff; color: white; }
+
+        /* Controls Panel - Hidden by default */
+        .controls-container {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            display: none; /* Hidden on Day views */
+        }
+
+        .toggle-label {
+            margin: 0 15px;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .toggle-label input { margin-right: 5px; transform: scale(1.2); }
+
+        .charts-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        h2 { text-align: center; font-size: 1.2rem; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Neuriva: A Health Metrics Dashboard</h1>
+        <p>Select a view to compare Before (0m) and After (30m) results.</p>
+    </header>
+
+    <div class="nav-menu">
+        <button class="nav-btn active" onclick="updateView('day1', this)">Day 1</button>
+        <button class="nav-btn" onclick="updateView('day2', this)">Day 2</button>
+        <button class="nav-btn" onclick="updateView('day3', this)">Day 3</button>
+        <button class="nav-btn" onclick="updateView('monthly', this)">Monthly View</button>
+    </div>
+
+    <div class="controls-container" id="controlsPanel">
+        <label class="toggle-label">
+            <input type="checkbox" id="toggleBars" checked onchange="toggleLayers()"> Show Histograms
+        </label>
+        <label class="toggle-label">
+            <input type="checkbox" id="toggleCurves" checked onchange="toggleLayers()"> Show Curves
+        </label>
+    </div>
+
+    <div class="charts-container">
+        <div class="chart-card">
+            <h2>ECG Values (ms/mV)</h2>
+            <canvas id="ecgChart"></canvas>
+        </div>
+
+        <div class="chart-card">
+            <h2>HRT Values (BPM)</h2>
+            <canvas id="hrtChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. Sample Data ---
+        const rawData = {
+            day1: { ecg: [80, 75], hrt: [72, 68] },
+            day2: { ecg: [82, 74], hrt: [75, 70] },
+            day3: { ecg: [78, 70], hrt: [70, 55] }
+        };
+
+        // --- 2. Custom Plugin for Adaptive Alignment ---
+        // This plugin forces the Line points (Datasets 2 & 3) to sit exactly 
+        // on top of the Bar centers (Datasets 0 & 1)
+        const barLineAlignmentPlugin = {
+            id: 'barLineAlignment',
+            beforeDatasetsDraw(chart) {
+                const ctx = chart.ctx;
+                
+                // Map Bar Index -> Line Index
+                // Bar 0 (Before) corresponds to Line 2 (Before)
+                // Bar 1 (After) corresponds to Line 3 (After)
+                const pairs = [[0, 2], [1, 3]];
+
+                pairs.forEach(([barIndex, lineIndex]) => {
+                    const barMeta = chart.getDatasetMeta(barIndex);
+                    const lineMeta = chart.getDatasetMeta(lineIndex);
+
+                    // Only proceed if both datasets exist and are visible
+                    if (!barMeta.hidden && !lineMeta.hidden && barMeta.data.length === lineMeta.data.length) {
+                        lineMeta.data.forEach((point, index) => {
+                            const barElement = barMeta.data[index];
+                            if (barElement) {
+                                // Force the Line Point X to match the Bar Element X
+                                point.x = barElement.x;
+                            }
+                        });
+                    }
+                });
+            }
+        };
+
+        // --- 3. Chart Initialization ---
+        let ecgChartInstance = null;
+        let hrtChartInstance = null;
+
+        function createChart(canvasId, label, colorBefore, colorAfter, colorLineBefore, colorLineAfter) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            return new Chart(ctx, {
+                // Register the custom plugin here
+                plugins: [barLineAlignmentPlugin], 
+                data: {
+                    labels: [],
+                    datasets: [
+                        // --- BARS ---
+                        {
+                            type: 'bar',
+                            label: '0 Mins (Bar)',
+                            data: [],
+                            backgroundColor: colorBefore,
+                            borderRadius: 5,
+                            order: 3,
+                            barPercentage: 0.8,
+                            categoryPercentage: 0.9
+                        },
+                        {
+                            type: 'bar',
+                            label: '30 Mins (Bar)',
+                            data: [],
+                            backgroundColor: colorAfter,
+                            borderRadius: 5,
+                            order: 3,
+                            barPercentage: 0.8,
+                            categoryPercentage: 0.9
+                        },
+                        // --- LINES (Now standard lines, aligned by plugin) ---
+                        {
+                            type: 'line', 
+                            label: '0 Mins (Curve)',
+                            data: [], 
+                            borderColor: colorLineBefore,
+                            backgroundColor: colorLineBefore,
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            fill: false,
+                            order: 1
+                        },
+                        {
+                            type: 'line',
+                            label: '30 Mins (Curve)',
+                            data: [],
+                            borderColor: colorLineAfter,
+                            backgroundColor: colorLineAfter,
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            fill: false,
+                            order: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { beginAtZero: true },
+                        x: { 
+                            type: 'category', 
+                            offset: true 
+                        }
+                    },
+                    plugins: {
+                        legend: { 
+                            position: 'bottom',
+                            labels: {
+                                // --- FILTER LOGIC ADDED HERE ---
+                                filter: function(legendItem, data) {
+                                    // Get the dataset associated with this legend item
+                                    const dataset = data.datasets[legendItem.datasetIndex];
+                                    
+                                    // If it's a line dataset and has no data (length 0), hide the legend
+                                    if (dataset.type === 'line' && (!dataset.data || dataset.data.length === 0)) {
+                                        return false;
+                                    }
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        ecgChartInstance = createChart('ecgChart', 'ECG', 'rgba(255, 99, 132, 0.6)', 'rgba(255, 99, 132, 1)', 'rgba(255, 99, 132, 1)', 'rgba(153, 0, 51, 1)');
+        hrtChartInstance = createChart('hrtChart', 'HRT', 'rgba(54, 162, 235, 0.6)', 'rgba(54, 162, 235, 1)', 'rgba(54, 162, 235, 1)', 'rgba(0, 51, 102, 1)');
+
+        // --- 4. View Logic ---
+        function updateView(view, btnElement) {
+            // Update UI Buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+
+            // Handle Controls Visibility
+            const isMonthly = (view === 'monthly');
+            const controlsPanel = document.getElementById('controlsPanel');
+            controlsPanel.style.display = isMonthly ? 'block' : 'none';
+
+            // Reset Toggle Checkboxes when entering Monthly view
+            if(isMonthly) {
+                document.getElementById('toggleBars').checked = true;
+                document.getElementById('toggleCurves').checked = true;
+                toggleLayers(); 
+            }
+
+            // Prepare Data containers
+            let labels = [];
+            
+            // We only need simple arrays now. 
+            // The plugin handles the X-coordinate alignment.
+            let barsBefore = []; 
+            let barsAfter = [];
+            
+            if (isMonthly) {
+                // --- MONTHLY VIEW ---
+                labels = ['Day 1', 'Day 2', 'Day 3'];
+                const days = ['day1', 'day2', 'day3'];
+                
+                // ECG Data
+                updateSingleChart(ecgChartInstance, labels, 
+                    days.map(d => rawData[d].ecg[0]), // Bars 0
+                    days.map(d => rawData[d].ecg[1]), // Bars 30
+                    days.map(d => rawData[d].ecg[0]), // Lines 0 (Same data as bars)
+                    days.map(d => rawData[d].ecg[1])  // Lines 30 (Same data as bars)
+                );
+
+                // HRT Data
+                updateSingleChart(hrtChartInstance, labels, 
+                    days.map(d => rawData[d].hrt[0]), 
+                    days.map(d => rawData[d].hrt[1]),
+                    days.map(d => rawData[d].hrt[0]), 
+                    days.map(d => rawData[d].hrt[1])
+                );
+
+            } else {
+                // --- DAILY VIEW ---
+                labels = [view.toUpperCase().replace('DAY', 'Day ')];
+                
+                const ecg0 = [rawData[view].ecg[0]];
+                const ecg30 = [rawData[view].ecg[1]];
+                const hrt0 = [rawData[view].hrt[0]];
+                const hrt30 = [rawData[view].hrt[1]];
+
+                // Pass empty arrays [] for lines in Day view
+                // This triggers the filter to hide the legend
+                updateSingleChart(ecgChartInstance, labels, ecg0, ecg30, [], []);
+                updateSingleChart(hrtChartInstance, labels, hrt0, hrt30, [], []);
+            }
+        }
+
+        function updateSingleChart(chart, labels, bars0, bars30, lines0, lines30) {
+            chart.data.labels = labels;
+            
+            // Bars
+            chart.data.datasets[0].data = bars0;
+            chart.data.datasets[1].data = bars30;
+            
+            // Lines (Now just simple values)
+            chart.data.datasets[2].data = lines0;
+            chart.data.datasets[3].data = lines30;
+            
+            // Visibility Logic
+            if(lines0.length === 0) {
+                // Day View: Ensure bars visible, hide lines
+                chart.getDatasetMeta(0).hidden = false;
+                chart.getDatasetMeta(1).hidden = false;
+                chart.getDatasetMeta(2).hidden = true;
+                chart.getDatasetMeta(3).hidden = true;
+            } else {
+                // Monthly View: Respect toggles
+                toggleLayers();
+            }
+
+            chart.update();
+        }
+
+        // --- 5. Toggle Visibility Logic ---
+        function toggleLayers() {
+            const showBars = document.getElementById('toggleBars').checked;
+            const showCurves = document.getElementById('toggleCurves').checked;
+            
+            const charts = [ecgChartInstance, hrtChartInstance];
+            
+            charts.forEach(chart => {
+                // Toggle Bars (Indices 0 and 1)
+                chart.getDatasetMeta(0).hidden = !showBars;
+                chart.getDatasetMeta(1).hidden = !showBars;
+
+                // Toggle Curves (Indices 2 and 3)
+                chart.getDatasetMeta(2).hidden = !showCurves;
+                chart.getDatasetMeta(3).hidden = !showCurves;
+                
+                chart.update();
+            });
+        }
+
+        // Default Load
+        window.onload = function() {
+            updateView('day1', document.querySelector('.nav-btn'));
+        };
+
+    </script>
+</body>
+</html>

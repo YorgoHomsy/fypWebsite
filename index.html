@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ECG & HRT Monitoring Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -44,12 +45,11 @@
         .nav-btn:hover { background: #e7f1ff; }
         .nav-btn.active { background: #007bff; color: white; }
 
-        /* Controls Panel - Hidden by default */
         .controls-container {
             text-align: center;
             margin-bottom: 20px;
             padding: 10px;
-            display: none; /* Hidden on Day views */
+            display: none;
         }
 
         .toggle-label {
@@ -66,6 +66,7 @@
             flex-wrap: wrap;
             gap: 20px;
             justify-content: center;
+            margin-bottom: 40px;
         }
 
         .chart-card {
@@ -77,13 +78,110 @@
             max-width: 600px;
         }
 
+        /* --- CONTACT SECTION STYLES --- */
+        .contact-section {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: left;
+        }
+
+        .contact-header { margin-bottom: 15px; font-size: 1.2rem; font-weight: bold; text-align: center; }
+        
+        textarea {
+            width: 100%;
+            height: 80px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            resize: none;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        .method-toggles {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            justify-content: center;
+        }
+
+        .method-btn {
+            padding: 8px 16px;
+            border: 1px solid #ccc;
+            background: #f9f9f9;
+            cursor: pointer;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .method-btn.selected {
+            border-color: #007bff;
+            background: #e7f1ff;
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            display: none;
+        }
+        
+        .input-field.visible { display: block; }
+
+        .validation-icon {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #28a745;
+            font-size: 1.2rem;
+            display: none;
+            pointer-events: none;
+        }
+
+        .send-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #ccc;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: not-allowed;
+            transition: background 0.3s;
+        }
+
+        .send-btn.active {
+            background-color: #007bff;
+            cursor: pointer;
+        }
+
+        .send-btn.active:hover { background-color: #0056b3; }
+
         h2 { text-align: center; font-size: 1.2rem; margin-bottom: 15px; }
     </style>
 </head>
-<body>
+<body id="dashboardBody">
 
     <header>
-        <h1>Neuriva: A Health Metrics Dashboard</h1>
+        <h1>Health Metrics Dashboard</h1>
         <p>Select a view to compare Before (0m) and After (30m) results.</p>
     </header>
 
@@ -115,127 +213,87 @@
         </div>
     </div>
 
+    <div class="contact-section">
+        <div class="contact-header">Doctor Communication</div>
+        
+        <label style="font-weight:600; font-size: 0.9rem;">Patient Comment:</label>
+        <textarea id="patientComment" placeholder="Write your observation or feeling here..."></textarea>
+
+        <div style="font-weight:600; font-size: 0.9rem; margin-bottom: 10px; text-align:center;">Select Contact Method:</div>
+        <div class="method-toggles">
+            <button class="method-btn" onclick="selectMethod('gmail', this)">
+                📧 Gmail
+            </button>
+            <button class="method-btn" onclick="selectMethod('whatsapp', this)">
+                📱 WhatsApp
+            </button>
+        </div>
+
+        <div class="input-group">
+            <input type="email" id="inputEmail" class="input-field" placeholder="Enter Doctor's Gmail (e.g., doctor@gmail.com)" oninput="validateInput()">
+            
+            <input type="text" id="inputPhone" class="input-field" placeholder="Enter Doctor's Mobile (e.g., 03123456 or 70123456)" oninput="validateInput()">
+            
+            <span id="checkMark" class="validation-icon">✓</span>
+        </div>
+        
+        <button id="sendBtn" class="send-btn" onclick="sendReport()">Send Report & PDF</button>
+    </div>
+
     <script>
-        // --- 1. Sample Data ---
+        // --- 1. GLOBAL STATE ---
+        let currentViewLabel = "Day 1"; 
+
         const rawData = {
             day1: { ecg: [80, 75], hrt: [72, 68] },
             day2: { ecg: [82, 74], hrt: [75, 70] },
-            day3: { ecg: [78, 70], hrt: [70, 55] }
+            day3: { ecg: [78, 70], hrt: [70, 65] }
         };
 
-        // --- 2. Custom Plugin for Adaptive Alignment ---
-        // This plugin forces the Line points (Datasets 2 & 3) to sit exactly 
-        // on top of the Bar centers (Datasets 0 & 1)
         const barLineAlignmentPlugin = {
             id: 'barLineAlignment',
             beforeDatasetsDraw(chart) {
                 const ctx = chart.ctx;
-                
-                // Map Bar Index -> Line Index
-                // Bar 0 (Before) corresponds to Line 2 (Before)
-                // Bar 1 (After) corresponds to Line 3 (After)
                 const pairs = [[0, 2], [1, 3]];
-
                 pairs.forEach(([barIndex, lineIndex]) => {
                     const barMeta = chart.getDatasetMeta(barIndex);
                     const lineMeta = chart.getDatasetMeta(lineIndex);
-
-                    // Only proceed if both datasets exist and are visible
                     if (!barMeta.hidden && !lineMeta.hidden && barMeta.data.length === lineMeta.data.length) {
                         lineMeta.data.forEach((point, index) => {
                             const barElement = barMeta.data[index];
-                            if (barElement) {
-                                // Force the Line Point X to match the Bar Element X
-                                point.x = barElement.x;
-                            }
+                            if (barElement) point.x = barElement.x;
                         });
                     }
                 });
             }
         };
 
-        // --- 3. Chart Initialization ---
         let ecgChartInstance = null;
         let hrtChartInstance = null;
 
         function createChart(canvasId, label, colorBefore, colorAfter, colorLineBefore, colorLineAfter) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             return new Chart(ctx, {
-                // Register the custom plugin here
                 plugins: [barLineAlignmentPlugin], 
                 data: {
                     labels: [],
                     datasets: [
-                        // --- BARS ---
-                        {
-                            type: 'bar',
-                            label: '0 Mins (Bar)',
-                            data: [],
-                            backgroundColor: colorBefore,
-                            borderRadius: 5,
-                            order: 3,
-                            barPercentage: 0.8,
-                            categoryPercentage: 0.9
-                        },
-                        {
-                            type: 'bar',
-                            label: '30 Mins (Bar)',
-                            data: [],
-                            backgroundColor: colorAfter,
-                            borderRadius: 5,
-                            order: 3,
-                            barPercentage: 0.8,
-                            categoryPercentage: 0.9
-                        },
-                        // --- LINES (Now standard lines, aligned by plugin) ---
-                        {
-                            type: 'line', 
-                            label: '0 Mins (Curve)',
-                            data: [], 
-                            borderColor: colorLineBefore,
-                            backgroundColor: colorLineBefore,
-                            borderWidth: 2,
-                            tension: 0.4,
-                            pointRadius: 4,
-                            fill: false,
-                            order: 1
-                        },
-                        {
-                            type: 'line',
-                            label: '30 Mins (Curve)',
-                            data: [],
-                            borderColor: colorLineAfter,
-                            backgroundColor: colorLineAfter,
-                            borderWidth: 2,
-                            tension: 0.4,
-                            pointRadius: 4,
-                            fill: false,
-                            order: 1
-                        }
+                        { type: 'bar', label: '0 Mins (Bar)', data: [], backgroundColor: colorBefore, borderRadius: 5, order: 3, barPercentage: 0.8, categoryPercentage: 0.9 },
+                        { type: 'bar', label: '30 Mins (Bar)', data: [], backgroundColor: colorAfter, borderRadius: 5, order: 3, barPercentage: 0.8, categoryPercentage: 0.9 },
+                        { type: 'line', label: '0 Mins (Curve)', data: [], borderColor: colorLineBefore, backgroundColor: colorLineBefore, borderWidth: 2, tension: 0.4, pointRadius: 4, fill: false, order: 1 },
+                        { type: 'line', label: '30 Mins (Curve)', data: [], borderColor: colorLineAfter, backgroundColor: colorLineAfter, borderWidth: 2, tension: 0.4, pointRadius: 4, fill: false, order: 1 }
                     ]
                 },
                 options: {
                     responsive: true,
-                    scales: {
-                        y: { beginAtZero: true },
-                        x: { 
-                            type: 'category', 
-                            offset: true 
-                        }
-                    },
+                    scales: { y: { beginAtZero: true }, x: { type: 'category', offset: true } },
                     plugins: {
                         legend: { 
                             position: 'bottom',
                             labels: {
-                                // --- FILTER LOGIC ADDED HERE ---
                                 filter: function(legendItem, data) {
-                                    // Get the dataset associated with this legend item
                                     const dataset = data.datasets[legendItem.datasetIndex];
-                                    
-                                    // If it's a line dataset and has no data (length 0), hide the legend
-                                    if (dataset.type === 'line' && (!dataset.data || dataset.data.length === 0)) {
-                                        return false;
-                                    }
+                                    if (dataset.type === 'line' && (!dataset.data || dataset.data.length === 0)) return false;
                                     return true;
                                 }
                             }
@@ -248,120 +306,190 @@
         ecgChartInstance = createChart('ecgChart', 'ECG', 'rgba(255, 99, 132, 0.6)', 'rgba(255, 99, 132, 1)', 'rgba(255, 99, 132, 1)', 'rgba(153, 0, 51, 1)');
         hrtChartInstance = createChart('hrtChart', 'HRT', 'rgba(54, 162, 235, 0.6)', 'rgba(54, 162, 235, 1)', 'rgba(54, 162, 235, 1)', 'rgba(0, 51, 102, 1)');
 
-        // --- 4. View Logic ---
         function updateView(view, btnElement) {
-            // Update UI Buttons
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
             btnElement.classList.add('active');
 
-            // Handle Controls Visibility
+            if (view === 'monthly') {
+                currentViewLabel = "Monthly Overview";
+            } else {
+                currentViewLabel = view.charAt(0).toUpperCase() + view.slice(1, 3) + " " + view.slice(3);
+            }
+
             const isMonthly = (view === 'monthly');
             const controlsPanel = document.getElementById('controlsPanel');
             controlsPanel.style.display = isMonthly ? 'block' : 'none';
 
-            // Reset Toggle Checkboxes when entering Monthly view
             if(isMonthly) {
                 document.getElementById('toggleBars').checked = true;
                 document.getElementById('toggleCurves').checked = true;
                 toggleLayers(); 
             }
 
-            // Prepare Data containers
             let labels = [];
-            
-            // We only need simple arrays now. 
-            // The plugin handles the X-coordinate alignment.
-            let barsBefore = []; 
-            let barsAfter = [];
+            const days = ['day1', 'day2', 'day3'];
             
             if (isMonthly) {
-                // --- MONTHLY VIEW ---
                 labels = ['Day 1', 'Day 2', 'Day 3'];
-                const days = ['day1', 'day2', 'day3'];
-                
-                // ECG Data
                 updateSingleChart(ecgChartInstance, labels, 
-                    days.map(d => rawData[d].ecg[0]), // Bars 0
-                    days.map(d => rawData[d].ecg[1]), // Bars 30
-                    days.map(d => rawData[d].ecg[0]), // Lines 0 (Same data as bars)
-                    days.map(d => rawData[d].ecg[1])  // Lines 30 (Same data as bars)
+                    days.map(d => rawData[d].ecg[0]), days.map(d => rawData[d].ecg[1]),
+                    days.map(d => rawData[d].ecg[0]), days.map(d => rawData[d].ecg[1])
                 );
-
-                // HRT Data
                 updateSingleChart(hrtChartInstance, labels, 
-                    days.map(d => rawData[d].hrt[0]), 
-                    days.map(d => rawData[d].hrt[1]),
-                    days.map(d => rawData[d].hrt[0]), 
-                    days.map(d => rawData[d].hrt[1])
+                    days.map(d => rawData[d].hrt[0]), days.map(d => rawData[d].hrt[1]),
+                    days.map(d => rawData[d].hrt[0]), days.map(d => rawData[d].hrt[1])
                 );
-
             } else {
-                // --- DAILY VIEW ---
                 labels = [view.toUpperCase().replace('DAY', 'Day ')];
-                
-                const ecg0 = [rawData[view].ecg[0]];
-                const ecg30 = [rawData[view].ecg[1]];
-                const hrt0 = [rawData[view].hrt[0]];
-                const hrt30 = [rawData[view].hrt[1]];
-
-                // Pass empty arrays [] for lines in Day view
-                // This triggers the filter to hide the legend
-                updateSingleChart(ecgChartInstance, labels, ecg0, ecg30, [], []);
-                updateSingleChart(hrtChartInstance, labels, hrt0, hrt30, [], []);
+                updateSingleChart(ecgChartInstance, labels, [rawData[view].ecg[0]], [rawData[view].ecg[1]], [], []);
+                updateSingleChart(hrtChartInstance, labels, [rawData[view].hrt[0]], [rawData[view].hrt[1]], [], []);
             }
         }
 
         function updateSingleChart(chart, labels, bars0, bars30, lines0, lines30) {
             chart.data.labels = labels;
-            
-            // Bars
             chart.data.datasets[0].data = bars0;
             chart.data.datasets[1].data = bars30;
-            
-            // Lines (Now just simple values)
             chart.data.datasets[2].data = lines0;
             chart.data.datasets[3].data = lines30;
             
-            // Visibility Logic
             if(lines0.length === 0) {
-                // Day View: Ensure bars visible, hide lines
                 chart.getDatasetMeta(0).hidden = false;
                 chart.getDatasetMeta(1).hidden = false;
                 chart.getDatasetMeta(2).hidden = true;
                 chart.getDatasetMeta(3).hidden = true;
             } else {
-                // Monthly View: Respect toggles
                 toggleLayers();
             }
-
             chart.update();
         }
 
-        // --- 5. Toggle Visibility Logic ---
         function toggleLayers() {
             const showBars = document.getElementById('toggleBars').checked;
             const showCurves = document.getElementById('toggleCurves').checked;
-            
-            const charts = [ecgChartInstance, hrtChartInstance];
-            
-            charts.forEach(chart => {
-                // Toggle Bars (Indices 0 and 1)
+            [ecgChartInstance, hrtChartInstance].forEach(chart => {
                 chart.getDatasetMeta(0).hidden = !showBars;
                 chart.getDatasetMeta(1).hidden = !showBars;
-
-                // Toggle Curves (Indices 2 and 3)
                 chart.getDatasetMeta(2).hidden = !showCurves;
                 chart.getDatasetMeta(3).hidden = !showCurves;
-                
                 chart.update();
             });
         }
 
-        // Default Load
         window.onload = function() {
             updateView('day1', document.querySelector('.nav-btn'));
         };
 
+        // --- CONTACT LOGIC ---
+        let currentMethod = null;
+
+        function selectMethod(method, btn) {
+            currentMethod = method;
+            document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+
+            const emailInput = document.getElementById('inputEmail');
+            const phoneInput = document.getElementById('inputPhone');
+            const checkMark = document.getElementById('checkMark');
+
+            checkMark.style.display = 'none';
+            document.getElementById('sendBtn').classList.remove('active');
+            document.getElementById('sendBtn').disabled = true;
+
+            if (method === 'gmail') {
+                emailInput.classList.add('visible');
+                phoneInput.classList.remove('visible');
+                emailInput.value = '';
+                emailInput.focus();
+            } else {
+                emailInput.classList.remove('visible');
+                phoneInput.classList.add('visible');
+                phoneInput.value = '';
+                phoneInput.focus();
+            }
+        }
+
+        function validateInput() {
+            let isValid = false;
+            const checkMark = document.getElementById('checkMark');
+            const sendBtn = document.getElementById('sendBtn');
+
+            if (currentMethod === 'gmail') {
+                const email = document.getElementById('inputEmail').value.trim();
+                
+                // GMAIL VALIDATION: Must contain chars, then @, then exactly "gmail.com"
+                const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+                isValid = gmailRegex.test(email);
+
+            } else if (currentMethod === 'whatsapp') {
+                const phoneInput = document.getElementById('inputPhone').value.replace(/\s+/g, '');
+                const lebaneseRegex = /^(?:\+?961|0)?(3|70|71|76|78|79|81)\d{6}$/;
+                isValid = lebaneseRegex.test(phoneInput);
+            }
+
+            if (isValid) {
+                checkMark.style.display = 'block';
+                sendBtn.classList.add('active');
+                sendBtn.disabled = false;
+            } else {
+                checkMark.style.display = 'none';
+                sendBtn.classList.remove('active');
+                sendBtn.disabled = true;
+            }
+        }
+
+        function sendReport() {
+            const sendBtn = document.getElementById('sendBtn');
+            if (sendBtn.disabled) return;
+
+            const comment = document.getElementById('patientComment').value;
+            const filenameLabel = currentViewLabel.replace(/ /g, '_');
+            const pdfName = `Health_Report_${filenameLabel}.pdf`;
+
+            // 1. GENERATE PDF
+            const element = document.body;
+            const opt = {
+                margin:       [10, 0, 10, 0],
+                filename:     pdfName,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                
+                // 2. PREPARE MESSAGE
+                let url = "";
+                const alertMsg = `The report for ${currentViewLabel} has been downloaded.\n\nPlease attach it to the message.`;
+
+                const subjectText = `Health Metrics Report - ${currentViewLabel}`;
+                const bodyText = `Here is my health report for ${currentViewLabel}.\n\nPatient Comment:\n${comment}\n\n(Please find the PDF attached)`;
+
+                if (currentMethod === 'gmail') {
+                    const email = document.getElementById('inputEmail').value.trim();
+                    const subject = encodeURIComponent(subjectText);
+                    const body = encodeURIComponent(bodyText);
+                    url = `mailto:${email}?subject=${subject}&body=${body}`;
+                    
+                } else if (currentMethod === 'whatsapp') {
+                    let phone = document.getElementById('inputPhone').value.replace(/\D/g, '');
+                    
+                    if (phone.startsWith('961')) {
+                        // Keep as is
+                    } else if (phone.startsWith('0')) {
+                        phone = '961' + phone.substring(1);
+                    } else {
+                        phone = '961' + phone;
+                    }
+
+                    const text = encodeURIComponent(`*${subjectText}*\n\nPatient Comment:\n${comment}\n\n(Please find the PDF attached)`);
+                    url = `https://wa.me/${phone}?text=${text}`;
+                }
+
+                alert(alertMsg);
+                window.open(url, '_blank');
+            });
+        }
     </script>
 </body>
 </html>
