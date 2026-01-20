@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#007bff">
     <title>ECG & HRT Monitoring Dashboard</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3063/3063176.png">
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -207,7 +212,7 @@
             </a>
         </div>
         
-        <h1 class="main-title" id="txt_title">Neuriva: Health Metrics Dashboard</h1>
+        <h1 class="main-title" id="txt_title">Health Metrics</h1>
         
         <div class="header-right">
             <button class="icon-btn" onclick="openProfile()" title="Profile">
@@ -291,6 +296,20 @@
 
         <button id="sendBtn" class="send-btn" onclick="sendReport()" disabled><span id="txt_send">Send Report & PDF</span></button>
     </div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
 
     <script>
         // --- 1. LOCALIZATION DATA ---
@@ -552,6 +571,14 @@
         }
 
         function sendReport() {
+            // OFFLINE CHECK
+            if(!navigator.onLine) {
+                const msg = currentLang==='en' 
+                    ? "You are currently offline. The PDF will be generated, but you cannot send the message until internet returns." 
+                    : "أنت حالياً غير متصل بالإنترنت. سيتم إنشاء ملف PDF، لكن لا يمكن إرسال الرسالة حتى عودة الإنترنت.";
+                alert(msg);
+            }
+
             // Data Gathering
             const pName = localStorage.getItem('patientName') || "Unknown";
             const pAge = localStorage.getItem('patientAge') || "?";
@@ -560,7 +587,6 @@
             
             let syms = [];
             document.querySelectorAll('input[name="symptom"]:checked').forEach(cb => {
-                // Get the translated label text next to the checkbox
                 syms.push(cb.parentElement.querySelector('span').innerText);
             });
             const symStr = syms.length ? syms.join(', ') : (currentLang==='en'?"None":"لا يوجد");
@@ -575,26 +601,22 @@
             const dateStr = new Date().toISOString().slice(0,10);
             const pdfName = `Health_Report_${pName}_${dateStr}.pdf`;
             
-            // Create Title for Report
             const reportTitle = currentLang==='en' 
                 ? `Health Report for ${pName} (Age: ${pAge})`
                 : `تقرير صحي للمريض: ${pName} (العمر: ${pAge})`;
 
-            // Modify DOM momentarily for PDF title capture (hack for html2pdf)
             const oldTitle = document.getElementById('txt_title').innerText;
             document.getElementById('txt_title').innerText = reportTitle;
 
-            // Handle Theme for PDF
             const wasDark = document.body.classList.contains('dark-mode');
             if(wasDark) toggleTheme();
 
             const element = document.body;
             html2pdf().set({ margin: [10,0], filename: pdfName, html2canvas:{scale:2}, jsPDF:{unit:'mm', format:'a4'} }).from(element).save().then(() => {
-                // Restore State
                 document.getElementById('txt_title').innerText = oldTitle;
                 if(wasDark) toggleTheme();
 
-                // Send Msg
+                // Send Msg (Only if online, but we open the intent anyway)
                 let url="";
                 const body = currentLang==='en'
                     ? `Patient: ${pName} (Age: ${pAge})\nView: ${currentViewLabel}\nSymptoms: ${symStr}\nMeds: ${med}\nNote: ${comment}\n(PDF Attached)`
