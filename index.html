@@ -7,219 +7,269 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+            --card-bg: #ffffff;
+            --border-color: #ccc;
+            --shadow: rgba(0,0,0,0.05);
+            --primary: #007bff;
+            --primary-hover: #0056b3;
+            --nav-bg: white;
+            --input-bg: #fff;
+        }
+
+        /* DARK MODE */
+        body.dark-mode {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --card-bg: #1e1e1e;
+            --border-color: #444;
+            --shadow: rgba(0,0,0,0.5);
+            --primary: #4da3ff;
+            --primary-hover: #1a73e8;
+            --nav-bg: #1e1e1e;
+            --input-bg: #2d2d2d;
+        }
+
+        /* RTL MODE (Arabic) */
+        body.rtl {
+            direction: rtl;
+            text-align: right;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             margin: 0;
             padding: 20px;
-            color: #333;
+            transition: background 0.3s, color 0.3s;
         }
 
-        header {
-            text-align: center;
+        /* --- HEADER GRID --- */
+        .header-controls {
+            display: grid; 
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
             margin-bottom: 20px;
+            gap: 10px;
         }
 
-        .nav-menu {
+        .header-left, .header-right {
             display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 20px;
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .header-right { justify-self: end; }
+        .header-left { justify-self: start; }
+
+        .emergency-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex; align-items: center; gap: 5px;
+            transition: transform 0.2s;
+        }
+        .emergency-btn:hover { transform: scale(1.05); background-color: #c82333; }
+
+        .icon-btn {
+            background: none; border: 1px solid var(--border-color);
+            border-radius: 5px; padding: 5px 10px; cursor: pointer;
+            color: var(--text-color); font-size: 1rem;
+        }
+        .icon-btn:hover { background: rgba(0,0,0,0.1); }
+
+        .main-title { margin: 0; font-size: 1.5rem; text-align: center; white-space: nowrap; }
+
+        /* --- MODAL --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: none;
+            justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-content {
+            background: var(--card-bg); padding: 25px; border-radius: 10px;
+            width: 300px; text-align: center;
+            border: 1px solid var(--border-color);
+        }
+        .modal-title { font-size: 1.2rem; margin-bottom: 15px; font-weight: bold; }
+
+        /* --- NAVIGATION --- */
+        .nav-container {
+            display: flex; justify-content: center; gap: 15px; margin-bottom: 20px;
+            background: var(--nav-bg); padding: 15px; border-radius: 10px;
+            box-shadow: 0 4px 6px var(--shadow); flex-wrap: wrap; align-items: center;
+        }
+
+        input[type="date"] {
+            padding: 10px; border: 2px solid var(--primary); border-radius: 5px;
+            font-family: inherit; font-weight: bold;
+            color: var(--text-color); background: var(--input-bg); cursor: pointer;
         }
 
         .nav-btn {
-            padding: 10px 20px;
-            border: 2px solid #007bff;
-            background: transparent;
-            color: #007bff;
-            cursor: pointer;
-            border-radius: 5px;
-            font-weight: bold;
+            padding: 10px 20px; border: 2px solid var(--primary); background: transparent;
+            color: var(--primary); cursor: pointer; border-radius: 5px; font-weight: bold;
             transition: all 0.3s ease;
         }
+        .nav-btn.active { background: var(--primary); color: white; }
 
-        .nav-btn:hover { background: #e7f1ff; }
-        .nav-btn.active { background: #007bff; color: white; }
-
-        .controls-container {
-            text-align: center;
-            margin-bottom: 20px;
-            padding: 10px;
-            display: none;
-        }
-
-        .toggle-label {
-            margin: 0 15px;
-            font-weight: 600;
-            cursor: pointer;
-            user-select: none;
-        }
+        .controls-container { text-align: center; margin-bottom: 20px; display: none; }
+        .toggle-label { margin: 0 15px; font-weight: 600; cursor: pointer; }
         
-        .toggle-label input { margin-right: 5px; transform: scale(1.2); }
-
-        .charts-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            justify-content: center;
-            margin-bottom: 40px;
-        }
+        .charts-container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-bottom: 40px; }
 
         .chart-card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            width: 100%;
-            max-width: 600px;
+            background: var(--card-bg); padding: 20px; border-radius: 10px;
+            box-shadow: 0 4px 6px var(--shadow); width: 100%; max-width: 600px;
         }
 
-        /* --- CONTACT SECTION STYLES --- */
+        /* --- CONTACT SECTION --- */
         .contact-section {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            max-width: 600px;
-            margin: 0 auto;
-            text-align: left;
+            background: var(--card-bg); padding: 30px; border-radius: 10px;
+            box-shadow: 0 4px 6px var(--shadow); max-width: 600px; margin: 0 auto;
         }
 
         .contact-header { margin-bottom: 15px; font-size: 1.2rem; font-weight: bold; text-align: center; }
         
-        textarea {
-            width: 100%;
-            height: 80px;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            resize: none;
-            box-sizing: border-box;
-            font-family: inherit;
+        textarea, .input-field, .med-input, .profile-input {
+            width: 100%; padding: 10px; border: 1px solid var(--border-color);
+            background: var(--input-bg); color: var(--text-color);
+            border-radius: 5px; margin-bottom: 15px; box-sizing: border-box; font-family: inherit;
         }
+        textarea { height: 60px; resize: none; }
 
-        .method-toggles {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 15px;
-            justify-content: center;
-        }
+        .checklist-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .checkbox-item { display: flex; align-items: center; font-size: 0.9rem; cursor: pointer; }
+        
+        /* RTL Fix for Checkboxes */
+        body.rtl .checkbox-item input { margin-right: 0; margin-left: 8px; }
+        body:not(.rtl) .checkbox-item input { margin-right: 8px; margin-left: 0; }
+
+        .method-toggles { display: flex; gap: 15px; margin-bottom: 15px; justify-content: center; }
 
         .method-btn {
-            padding: 8px 16px;
-            border: 1px solid #ccc;
-            background: #f9f9f9;
-            cursor: pointer;
-            border-radius: 5px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+            padding: 8px 16px; border: 1px solid var(--border-color);
+            background: var(--input-bg); color: var(--text-color); cursor: pointer;
+            border-radius: 5px; display: flex; align-items: center; gap: 5px;
         }
+        .method-btn.selected { border-color: var(--primary); background: rgba(0, 123, 255, 0.1); color: var(--primary); font-weight: bold; }
 
-        .method-btn.selected {
-            border-color: #007bff;
-            background: #e7f1ff;
-            color: #007bff;
-            font-weight: bold;
-        }
-
-        .input-group {
-            margin-bottom: 15px;
-            position: relative;
-        }
-
-        .input-field {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-sizing: border-box;
-            display: none;
-        }
-        
+        .input-group { margin-bottom: 10px; position: relative; }
+        .input-field { display: none; }
         .input-field.visible { display: block; }
 
         .validation-icon {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #28a745;
-            font-size: 1.2rem;
-            display: none;
-            pointer-events: none;
+            position: absolute; top: 50%; transform: translateY(-50%);
+            color: #28a745; font-size: 1.2rem; display: none; pointer-events: none;
         }
+        /* Icon Position flips in RTL */
+        body:not(.rtl) .validation-icon { right: 10px; }
+        body.rtl .validation-icon { left: 10px; }
 
-        .send-btn {
-            width: 100%;
-            padding: 12px;
-            background-color: #ccc;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: not-allowed;
-            transition: background 0.3s;
+        .send-btn, .save-btn {
+            width: 100%; padding: 12px; background-color: var(--primary); color: white;
+            border: none; border-radius: 5px; font-size: 1rem; font-weight: bold; cursor: pointer;
         }
+        .send-btn:disabled { background-color: #ccc; cursor: not-allowed; }
 
-        .send-btn.active {
-            background-color: #007bff;
-            cursor: pointer;
+        @media (max-width: 480px) {
+            .header-controls { grid-template-columns: 1fr; gap: 10px; justify-items: center; }
+            .header-left, .header-right { width: 100%; justify-content: center; }
         }
-
-        .send-btn.active:hover { background-color: #0056b3; }
-
-        h2 { text-align: center; font-size: 1.2rem; margin-bottom: 15px; }
     </style>
 </head>
 <body id="dashboardBody">
 
-    <header>
-        <h1>Health Metrics Dashboard</h1>
-        <p>Select a view to compare Before (0m) and After (30m) results.</p>
-    </header>
+    <div class="modal-overlay" id="profileModal">
+        <div class="modal-content">
+            <div class="modal-title" id="txt_modal_title">Patient Profile</div>
+            <input type="text" id="profileName" class="profile-input" placeholder="Full Name">
+            <input type="number" id="profileAge" class="profile-input" placeholder="Age">
+            <button class="save-btn" onclick="saveProfile()" id="txt_modal_save">Save</button>
+            <button class="method-btn" onclick="closeProfile()" style="width:100%; margin-top:10px; justify-content:center;" id="txt_modal_cancel">Close</button>
+        </div>
+    </div>
 
-    <div class="nav-menu">
-        <button class="nav-btn active" onclick="updateView('day1', this)">Day 1</button>
-        <button class="nav-btn" onclick="updateView('day2', this)">Day 2</button>
-        <button class="nav-btn" onclick="updateView('day3', this)">Day 3</button>
-        <button class="nav-btn" onclick="updateView('monthly', this)">Monthly View</button>
+    <div class="header-controls">
+        <div class="header-left">
+            <a href="tel:140" class="emergency-btn">
+                🚑 <span id="txt_emergency">Emergency (140)</span>
+            </a>
+        </div>
+        
+        <h1 class="main-title" id="txt_title">Neuriva: Health Metrics Dashboard</h1>
+        
+        <div class="header-right">
+            <button class="icon-btn" onclick="openProfile()" title="Profile">
+                👤
+            </button>
+            <button class="icon-btn" onclick="toggleLang()" id="btn_lang">
+                عربي
+            </button>
+            <button class="icon-btn" onclick="toggleTheme()" title="Toggle Dark Mode">
+                🌙
+            </button>
+        </div>
+    </div>
+    
+    <p style="text-align:center; margin-top:0;" id="txt_subtitle">Select a date or view the monthly overview.</p>
+
+    <div class="nav-container">
+        <input type="date" id="datePicker" onchange="handleDateChange()">
+        <button id="monthlyBtn" class="nav-btn" onclick="setMonthlyView()"><span id="txt_monthly">Monthly Overview</span></button>
     </div>
 
     <div class="controls-container" id="controlsPanel">
         <label class="toggle-label">
-            <input type="checkbox" id="toggleBars" checked onchange="toggleLayers()"> Show Histograms
+            <input type="checkbox" id="toggleBars" checked onchange="toggleLayers()"> <span id="txt_show_hist">Show Histograms</span>
         </label>
         <label class="toggle-label">
-            <input type="checkbox" id="toggleCurves" checked onchange="toggleLayers()"> Show Curves
+            <input type="checkbox" id="toggleCurves" checked onchange="toggleLayers()"> <span id="txt_show_curves">Show Curves</span>
         </label>
     </div>
 
     <div class="charts-container">
         <div class="chart-card">
-            <h2>ECG Values (ms/mV)</h2>
+            <h2 id="txt_chart_ecg">ECG Values (ms/mV)</h2>
             <canvas id="ecgChart"></canvas>
         </div>
 
         <div class="chart-card">
-            <h2>HRT Values (BPM)</h2>
+            <h2 id="txt_chart_hrt">HRT Values (BPM)</h2>
             <canvas id="hrtChart"></canvas>
         </div>
     </div>
 
     <div class="contact-section">
-        <div class="contact-header">Doctor Communication</div>
+        <div class="contact-header" id="txt_contact_header">Doctor Communication</div>
         
-        <label style="font-weight:600; font-size: 0.9rem;">Patient Comment:</label>
-        <textarea id="patientComment" placeholder="Write your observation or feeling here..."></textarea>
+        <label style="font-weight:600; font-size: 0.9rem; display:block; margin-bottom:8px;" id="txt_symptoms">Symptoms:</label>
+        <div class="checklist-container">
+            <label class="checkbox-item"><input type="checkbox" name="symptom" value="Dizziness"><span class="lbl-sym">Dizziness</span></label>
+            <label class="checkbox-item"><input type="checkbox" name="symptom" value="Chest Pain"><span class="lbl-sym">Chest Pain</span></label>
+            <label class="checkbox-item"><input type="checkbox" name="symptom" value="Shortness of Breath"><span class="lbl-sym">Shortness of Breath</span></label>
+            <label class="checkbox-item"><input type="checkbox" name="symptom" value="Palpitations"><span class="lbl-sym">Palpitations</span></label>
+            <label class="checkbox-item"><input type="checkbox" name="symptom" value="Fatigue"><span class="lbl-sym">Fatigue</span></label>
+            <label class="checkbox-item"><input type="checkbox" name="symptom" value="Nausea"><span class="lbl-sym">Nausea</span></label>
+        </div>
 
-        <div style="font-weight:600; font-size: 0.9rem; margin-bottom: 10px; text-align:center;">Select Contact Method:</div>
+        <label style="font-weight:600; font-size: 0.9rem;" id="txt_meds">Medication Taken:</label>
+        <input type="text" id="medInput" class="med-input" placeholder="e.g., Aspirin">
+
+        <label style="font-weight:600; font-size: 0.9rem;" id="txt_comments">Additional Comment:</label>
+        <textarea id="patientComment" placeholder="Any other notes..."></textarea>
+
+        <div style="font-weight:600; font-size: 0.9rem; margin-bottom: 10px; text-align:center;" id="txt_method">Select Contact Method:</div>
         <div class="method-toggles">
             <button class="method-btn" onclick="selectMethod('gmail', this)">
                 📧 Gmail
@@ -230,266 +280,348 @@
         </div>
 
         <div class="input-group">
-            <input type="email" id="inputEmail" class="input-field" placeholder="Enter Doctor's Gmail (e.g., doctor@gmail.com)" oninput="validateInput()">
-            
-            <input type="text" id="inputPhone" class="input-field" placeholder="Enter Doctor's Mobile (e.g., 03123456 or 70123456)" oninput="validateInput()">
-            
+            <input type="email" id="inputEmail" class="input-field" placeholder="Doctor's Gmail" oninput="validateInput()">
+            <input type="text" id="inputPhone" class="input-field" placeholder="Doctor's Mobile" oninput="validateInput()">
             <span id="checkMark" class="validation-icon">✓</span>
         </div>
         
-        <button id="sendBtn" class="send-btn" onclick="sendReport()">Send Report & PDF</button>
+        <label class="checkbox-item" style="margin-bottom:15px;">
+            <input type="checkbox" id="rememberMe"> <span id="txt_remember">Remember my doctor's details</span>
+        </label>
+
+        <button id="sendBtn" class="send-btn" onclick="sendReport()" disabled><span id="txt_send">Send Report & PDF</span></button>
     </div>
 
     <script>
-        // --- 1. GLOBAL STATE ---
-        let currentViewLabel = "Day 1"; 
-
-        const rawData = {
-            day1: { ecg: [80, 75], hrt: [72, 68] },
-            day2: { ecg: [82, 74], hrt: [75, 70] },
-            day3: { ecg: [78, 70], hrt: [70, 65] }
-        };
-
-        const barLineAlignmentPlugin = {
-            id: 'barLineAlignment',
-            beforeDatasetsDraw(chart) {
-                const ctx = chart.ctx;
-                const pairs = [[0, 2], [1, 3]];
-                pairs.forEach(([barIndex, lineIndex]) => {
-                    const barMeta = chart.getDatasetMeta(barIndex);
-                    const lineMeta = chart.getDatasetMeta(lineIndex);
-                    if (!barMeta.hidden && !lineMeta.hidden && barMeta.data.length === lineMeta.data.length) {
-                        lineMeta.data.forEach((point, index) => {
-                            const barElement = barMeta.data[index];
-                            if (barElement) point.x = barElement.x;
-                        });
-                    }
-                });
+        // --- 1. LOCALIZATION DATA ---
+        const langData = {
+            en: {
+                emergency: "Emergency (140)", title: "Health Metrics", subtitle: "Select a date or view the monthly overview.",
+                monthly: "Monthly Overview", show_hist: "Show Histograms", show_curves: "Show Curves",
+                chart_ecg: "ECG Values (ms/mV)", chart_hrt: "HRT Values (BPM)",
+                contact_header: "Doctor Communication", symptoms: "Symptoms:", meds: "Medication Taken:",
+                comments: "Additional Comment:", method: "Select Contact Method:",
+                remember: "Remember my doctor's details", send: "Send Report & PDF",
+                modal_title: "Patient Profile", modal_save: "Save", modal_cancel: "Close",
+                ph_name: "Full Name", ph_age: "Age", ph_med: "e.g., Aspirin", ph_notes: "Any other notes...",
+                ph_email: "Doctor's Gmail", ph_phone: "Doctor's Mobile",
+                sym_list: ["Dizziness", "Chest Pain", "Shortness of Breath", "Palpitations", "Fatigue", "Nausea"],
+                weeks: ["Week 1", "Week 2", "Week 3", "Week 4"],
+                chart_labels: ["0 Mins (Bar)", "30 Mins (Bar)", "0 Mins (Curve)", "30 Mins (Curve)"]
+            },
+            ar: {
+                emergency: "طوارئ (140)", title: "مؤشرات الصحة", subtitle: "اختر تاريخاً أو اعرض الملخص الشهري.",
+                monthly: "الملخص الشهري", show_hist: "إظهار الرسوم البيانية", show_curves: "إظهار المنحنيات",
+                chart_ecg: "قيم تخطيط القلب (ms/mV)", chart_hrt: "قيم نبضات القلب (BPM)",
+                contact_header: "التواصل مع الطبيب", symptoms: "الأعراض:", meds: "الأدوية المتناولة:",
+                comments: "ملاحظات إضافية:", method: "اختر وسيلة الاتصال:",
+                remember: "تذكر بيانات طبيبي", send: "إرسال التقرير والـ PDF",
+                modal_title: "ملف المريض", modal_save: "حفظ", modal_cancel: "إغلاق",
+                ph_name: "الاسم الكامل", ph_age: "العمر", ph_med: "مثلاً: أسبرين", ph_notes: "أي ملاحظات أخرى...",
+                ph_email: "بريد الطبيب (Gmail)", ph_phone: "رقم الطبيب",
+                sym_list: ["دوخة", "ألم في الصدر", "ضيق في التنفس", "خفقان القلب", "تعب", "غثيان"],
+                weeks: ["الأسبوع 1", "الأسبوع 2", "الأسبوع 3", "الأسبوع 4"],
+                chart_labels: ["0 دقيقة (عامود)", "30 دقيقة (عامود)", "0 دقيقة (منحنى)", "30 دقيقة (منحنى)"]
             }
         };
 
-        let ecgChartInstance = null;
-        let hrtChartInstance = null;
+        // --- 2. STATE ---
+        let currentLang = 'en';
+        let currentViewMode = 'daily'; 
+        let currentViewLabel = ""; 
+        let isDarkMode = false;
+        let currentMethod = null;
 
-        function createChart(canvasId, label, colorBefore, colorAfter, colorLineBefore, colorLineAfter) {
+        // --- 3. PROFILE MODAL LOGIC ---
+        function openProfile() { document.getElementById('profileModal').style.display = 'flex'; }
+        function closeProfile() { document.getElementById('profileModal').style.display = 'none'; }
+        
+        function saveProfile() {
+            const name = document.getElementById('profileName').value;
+            const age = document.getElementById('profileAge').value;
+            localStorage.setItem('patientName', name);
+            localStorage.setItem('patientAge', age);
+            closeProfile();
+            alert(currentLang === 'en' ? "Profile Saved" : "تم حفظ الملف");
+        }
+
+        function loadProfile() {
+            const name = localStorage.getItem('patientName');
+            const age = localStorage.getItem('patientAge');
+            if(name) document.getElementById('profileName').value = name;
+            if(age) document.getElementById('profileAge').value = age;
+        }
+
+        // --- 4. LANGUAGE LOGIC ---
+        function toggleLang() {
+            currentLang = (currentLang === 'en') ? 'ar' : 'en';
+            
+            // Toggle RTL Class
+            if(currentLang === 'ar') document.body.classList.add('rtl');
+            else document.body.classList.remove('rtl');
+
+            // Update Toggle Button Text
+            document.getElementById('btn_lang').innerText = (currentLang === 'en') ? 'عربي' : 'English';
+
+            // Apply Translations
+            const data = langData[currentLang];
+            
+            // Text Content
+            const mapping = {
+                'txt_emergency': data.emergency, 'txt_title': data.title, 'txt_subtitle': data.subtitle,
+                'txt_monthly': data.monthly, 'txt_show_hist': data.show_hist, 'txt_show_curves': data.show_curves,
+                'txt_chart_ecg': data.chart_ecg, 'txt_chart_hrt': data.chart_hrt, 'txt_contact_header': data.contact_header,
+                'txt_symptoms': data.symptoms, 'txt_meds': data.meds, 'txt_comments': data.comments,
+                'txt_method': data.method, 'txt_remember': data.remember, 'txt_send': data.send,
+                'txt_modal_title': data.modal_title, 'txt_modal_save': data.modal_save, 'txt_modal_cancel': data.modal_cancel
+            };
+            for (const [id, text] of Object.entries(mapping)) {
+                if(document.getElementById(id)) document.getElementById(id).innerText = text;
+            }
+
+            // Placeholders
+            document.getElementById('profileName').placeholder = data.ph_name;
+            document.getElementById('profileAge').placeholder = data.ph_age;
+            document.getElementById('medInput').placeholder = data.ph_med;
+            document.getElementById('patientComment').placeholder = data.ph_notes;
+            document.getElementById('inputEmail').placeholder = data.ph_email;
+            document.getElementById('inputPhone').placeholder = data.ph_phone;
+
+            // Checkbox Labels
+            const symLabels = document.querySelectorAll('.lbl-sym');
+            symLabels.forEach((lbl, index) => { lbl.innerText = data.sym_list[index]; });
+
+            // Refresh Charts to update Labels/Weeks
+            if(currentViewMode === 'monthly') setMonthlyView();
+            else handleDateChange();
+        }
+
+        // --- 5. THEME LOGIC ---
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark-mode');
+            document.querySelector('.theme-toggle').textContent = isDarkMode ? '☀️' : '🌙';
+            updateChartTheme(ecgChartInstance);
+            updateChartTheme(hrtChartInstance);
+        }
+
+        function updateChartTheme(chart) {
+            const gridColor = isDarkMode ? '#444' : '#ddd';
+            const tickColor = isDarkMode ? '#e0e0e0' : '#333';
+            chart.options.scales.x.grid.color = gridColor;
+            chart.options.scales.y.grid.color = gridColor;
+            chart.options.scales.x.ticks.color = tickColor;
+            chart.options.scales.y.ticks.color = tickColor;
+            chart.update();
+        }
+
+        // --- 6. DATA & CHARTS ---
+        function getPseudoRandomData(seedString) {
+            let hash = 0;
+            for (let i = 0; i < seedString.length; i++) hash = ((hash << 5) - hash) + seedString.charCodeAt(i) | 0;
+            const absHash = Math.abs(hash);
+            return { ecg: [ 70 + (absHash % 20), 65 + (absHash % 15) ], hrt: [ 60 + (absHash % 30), 60 + ((absHash * 2) % 25) ] };
+        }
+
+        function handleDateChange() {
+            const datePicker = document.getElementById('datePicker');
+            if(!datePicker.value) return;
+            
+            currentViewMode = 'daily';
+            currentViewLabel = datePicker.value;
+            
+            document.getElementById('monthlyBtn').classList.remove('active');
+            datePicker.style.borderColor = "var(--primary)";
+            document.getElementById('controlsPanel').style.display = 'none';
+
+            const data = getPseudoRandomData(datePicker.value);
+            updateSingleChart(ecgChartInstance, [currentViewLabel], [data.ecg[0]], [data.ecg[1]], [], []);
+            updateSingleChart(hrtChartInstance, [currentViewLabel], [data.hrt[0]], [data.hrt[1]], [], []);
+        }
+
+        function setMonthlyView() {
+            currentViewMode = 'monthly';
+            currentViewLabel = langData[currentLang].monthly;
+            
+            document.getElementById('monthlyBtn').classList.add('active');
+            document.getElementById('datePicker').value = "";
+            document.getElementById('datePicker').style.borderColor = "#ccc";
+            document.getElementById('controlsPanel').style.display = 'block';
+
+            // Use Localized Labels for Weeks
+            const labels = langData[currentLang].weeks;
+            let ecg0=[], ecg30=[], hrt0=[], hrt30=[];
+
+            for (let w = 0; w < 4; w++) {
+                let sE0=0, sE30=0, sH0=0, sH30=0;
+                for (let d = 0; d < 7; d++) {
+                    let daily = getPseudoRandomData(`2023-10-${(w * 7) + d + 1}`);
+                    sE0+=daily.ecg[0]; sE30+=daily.ecg[1]; sH0+=daily.hrt[0]; sH30+=daily.hrt[1];
+                }
+                ecg0.push(Math.round(sE0/7)); ecg30.push(Math.round(sE30/7));
+                hrt0.push(Math.round(sH0/7)); hrt30.push(Math.round(sH30/7));
+            }
+            updateSingleChart(ecgChartInstance, labels, ecg0, ecg30, ecg0, ecg30);
+            updateSingleChart(hrtChartInstance, labels, hrt0, hrt30, hrt0, hrt30);
+        }
+
+        let ecgChartInstance = null, hrtChartInstance = null;
+
+        function createChart(canvasId, colorB, colorA, colorLB, colorLA) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             return new Chart(ctx, {
-                plugins: [barLineAlignmentPlugin], 
+                plugins: [{
+                    id: 'align', beforeDatasetsDraw(c) {
+                        const pairs=[[0,2],[1,3]];
+                        pairs.forEach(([bI,lI])=>{
+                            const bM=c.getDatasetMeta(bI), lM=c.getDatasetMeta(lI);
+                            if(!bM.hidden && !lM.hidden && bM.data.length===lM.data.length)
+                                lM.data.forEach((p,i)=>{ if(bM.data[i]) p.x=bM.data[i].x; });
+                        });
+                    }
+                }],
                 data: {
                     labels: [],
                     datasets: [
-                        { type: 'bar', label: '0 Mins (Bar)', data: [], backgroundColor: colorBefore, borderRadius: 5, order: 3, barPercentage: 0.8, categoryPercentage: 0.9 },
-                        { type: 'bar', label: '30 Mins (Bar)', data: [], backgroundColor: colorAfter, borderRadius: 5, order: 3, barPercentage: 0.8, categoryPercentage: 0.9 },
-                        { type: 'line', label: '0 Mins (Curve)', data: [], borderColor: colorLineBefore, backgroundColor: colorLineBefore, borderWidth: 2, tension: 0.4, pointRadius: 4, fill: false, order: 1 },
-                        { type: 'line', label: '30 Mins (Curve)', data: [], borderColor: colorLineAfter, backgroundColor: colorLineAfter, borderWidth: 2, tension: 0.4, pointRadius: 4, fill: false, order: 1 }
+                        { type: 'bar', data: [], backgroundColor: colorB, borderRadius:5, order:3, barPercentage:0.6 },
+                        { type: 'bar', data: [], backgroundColor: colorA, borderRadius:5, order:3, barPercentage:0.6 },
+                        { type: 'line', data: [], borderColor: colorLB, backgroundColor:colorLB, borderWidth:2, pointRadius:4, order:1 },
+                        { type: 'line', data: [], borderColor: colorLA, backgroundColor:colorLA, borderWidth:2, pointRadius:4, order:1 }
                     ]
                 },
                 options: {
                     responsive: true,
-                    scales: { y: { beginAtZero: true }, x: { type: 'category', offset: true } },
-                    plugins: {
-                        legend: { 
-                            position: 'bottom',
-                            labels: {
-                                filter: function(legendItem, data) {
-                                    const dataset = data.datasets[legendItem.datasetIndex];
-                                    if (dataset.type === 'line' && (!dataset.data || dataset.data.length === 0)) return false;
-                                    return true;
-                                }
-                            }
-                        }
-                    }
+                    scales: { y: { beginAtZero:true }, x: { offset:true } },
+                    plugins: { legend: { position: 'bottom', labels: { filter: (l, d) => d.datasets[l.datasetIndex].type!=='line'||d.datasets[l.datasetIndex].data.length>0 } } }
                 }
             });
         }
 
-        ecgChartInstance = createChart('ecgChart', 'ECG', 'rgba(255, 99, 132, 0.6)', 'rgba(255, 99, 132, 1)', 'rgba(255, 99, 132, 1)', 'rgba(153, 0, 51, 1)');
-        hrtChartInstance = createChart('hrtChart', 'HRT', 'rgba(54, 162, 235, 0.6)', 'rgba(54, 162, 235, 1)', 'rgba(54, 162, 235, 1)', 'rgba(0, 51, 102, 1)');
+        ecgChartInstance = createChart('ecgChart', 'rgba(255, 99, 132, 0.6)', 'rgba(255, 99, 132, 1)', 'rgba(255, 99, 132, 1)', 'rgba(153, 0, 51, 1)');
+        hrtChartInstance = createChart('hrtChart', 'rgba(54, 162, 235, 0.6)', 'rgba(54, 162, 235, 1)', 'rgba(54, 162, 235, 1)', 'rgba(0, 51, 102, 1)');
 
-        function updateView(view, btnElement) {
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-            btnElement.classList.add('active');
-
-            if (view === 'monthly') {
-                currentViewLabel = "Monthly Overview";
-            } else {
-                currentViewLabel = view.charAt(0).toUpperCase() + view.slice(1, 3) + " " + view.slice(3);
-            }
-
-            const isMonthly = (view === 'monthly');
-            const controlsPanel = document.getElementById('controlsPanel');
-            controlsPanel.style.display = isMonthly ? 'block' : 'none';
-
-            if(isMonthly) {
-                document.getElementById('toggleBars').checked = true;
-                document.getElementById('toggleCurves').checked = true;
-                toggleLayers(); 
-            }
-
-            let labels = [];
-            const days = ['day1', 'day2', 'day3'];
-            
-            if (isMonthly) {
-                labels = ['Day 1', 'Day 2', 'Day 3'];
-                updateSingleChart(ecgChartInstance, labels, 
-                    days.map(d => rawData[d].ecg[0]), days.map(d => rawData[d].ecg[1]),
-                    days.map(d => rawData[d].ecg[0]), days.map(d => rawData[d].ecg[1])
-                );
-                updateSingleChart(hrtChartInstance, labels, 
-                    days.map(d => rawData[d].hrt[0]), days.map(d => rawData[d].hrt[1]),
-                    days.map(d => rawData[d].hrt[0]), days.map(d => rawData[d].hrt[1])
-                );
-            } else {
-                labels = [view.toUpperCase().replace('DAY', 'Day ')];
-                updateSingleChart(ecgChartInstance, labels, [rawData[view].ecg[0]], [rawData[view].ecg[1]], [], []);
-                updateSingleChart(hrtChartInstance, labels, [rawData[view].hrt[0]], [rawData[view].hrt[1]], [], []);
-            }
-        }
-
-        function updateSingleChart(chart, labels, bars0, bars30, lines0, lines30) {
+        function updateSingleChart(chart, labels, b0, b30, l0, l30) {
             chart.data.labels = labels;
-            chart.data.datasets[0].data = bars0;
-            chart.data.datasets[1].data = bars30;
-            chart.data.datasets[2].data = lines0;
-            chart.data.datasets[3].data = lines30;
+            // Update Legend Labels based on Language
+            const leg = langData[currentLang].chart_labels;
+            chart.data.datasets[0].label = leg[0];
+            chart.data.datasets[1].label = leg[1];
+            chart.data.datasets[2].label = leg[2];
+            chart.data.datasets[3].label = leg[3];
+
+            chart.data.datasets[0].data = b0; chart.data.datasets[1].data = b30;
+            chart.data.datasets[2].data = l0; chart.data.datasets[3].data = l30;
             
-            if(lines0.length === 0) {
-                chart.getDatasetMeta(0).hidden = false;
-                chart.getDatasetMeta(1).hidden = false;
-                chart.getDatasetMeta(2).hidden = true;
-                chart.getDatasetMeta(3).hidden = true;
-            } else {
-                toggleLayers();
-            }
+            if(l0.length===0) {
+                chart.getDatasetMeta(0).hidden=false; chart.getDatasetMeta(1).hidden=false;
+                chart.getDatasetMeta(2).hidden=true; chart.getDatasetMeta(3).hidden=true;
+            } else toggleLayers();
             chart.update();
         }
 
         function toggleLayers() {
-            const showBars = document.getElementById('toggleBars').checked;
-            const showCurves = document.getElementById('toggleCurves').checked;
-            [ecgChartInstance, hrtChartInstance].forEach(chart => {
-                chart.getDatasetMeta(0).hidden = !showBars;
-                chart.getDatasetMeta(1).hidden = !showBars;
-                chart.getDatasetMeta(2).hidden = !showCurves;
-                chart.getDatasetMeta(3).hidden = !showCurves;
-                chart.update();
+            if(currentViewMode!=='monthly') return;
+            const bars = document.getElementById('toggleBars').checked;
+            const curves = document.getElementById('toggleCurves').checked;
+            [ecgChartInstance, hrtChartInstance].forEach(c => {
+                c.getDatasetMeta(0).hidden = !bars; c.getDatasetMeta(1).hidden = !bars;
+                c.getDatasetMeta(2).hidden = !curves; c.getDatasetMeta(3).hidden = !curves;
+                c.update();
             });
         }
 
-        window.onload = function() {
-            updateView('day1', document.querySelector('.nav-btn'));
-        };
-
-        // --- CONTACT LOGIC ---
-        let currentMethod = null;
-
-        function selectMethod(method, btn) {
-            currentMethod = method;
+        // --- 7. CONTACT & SEND ---
+        function selectMethod(m, btn) {
+            currentMethod = m;
             document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('selected'));
             btn.classList.add('selected');
-
-            const emailInput = document.getElementById('inputEmail');
-            const phoneInput = document.getElementById('inputPhone');
-            const checkMark = document.getElementById('checkMark');
-
-            checkMark.style.display = 'none';
-            document.getElementById('sendBtn').classList.remove('active');
-            document.getElementById('sendBtn').disabled = true;
-
-            if (method === 'gmail') {
-                emailInput.classList.add('visible');
-                phoneInput.classList.remove('visible');
-                emailInput.value = '';
-                emailInput.focus();
-            } else {
-                emailInput.classList.remove('visible');
-                phoneInput.classList.add('visible');
-                phoneInput.value = '';
-                phoneInput.focus();
-            }
+            const em = document.getElementById('inputEmail'), ph = document.getElementById('inputPhone');
+            if(m==='gmail') { em.classList.add('visible'); ph.classList.remove('visible'); if(!em.value) em.focus(); }
+            else { em.classList.remove('visible'); ph.classList.add('visible'); if(!ph.value) ph.focus(); }
+            validateInput();
         }
 
         function validateInput() {
-            let isValid = false;
-            const checkMark = document.getElementById('checkMark');
-            const sendBtn = document.getElementById('sendBtn');
-
-            if (currentMethod === 'gmail') {
-                const email = document.getElementById('inputEmail').value.trim();
-                
-                // GMAIL VALIDATION: Must contain chars, then @, then exactly "gmail.com"
-                const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-                isValid = gmailRegex.test(email);
-
-            } else if (currentMethod === 'whatsapp') {
-                const phoneInput = document.getElementById('inputPhone').value.replace(/\s+/g, '');
-                const lebaneseRegex = /^(?:\+?961|0)?(3|70|71|76|78|79|81)\d{6}$/;
-                isValid = lebaneseRegex.test(phoneInput);
-            }
-
-            if (isValid) {
-                checkMark.style.display = 'block';
-                sendBtn.classList.add('active');
-                sendBtn.disabled = false;
-            } else {
-                checkMark.style.display = 'none';
-                sendBtn.classList.remove('active');
-                sendBtn.disabled = true;
-            }
+            const check = document.getElementById('checkMark'), btn = document.getElementById('sendBtn');
+            let valid = false;
+            if(currentMethod==='gmail') valid = /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(document.getElementById('inputEmail').value.trim());
+            else if(currentMethod==='whatsapp') valid = /^(?:\+?961|0)?(3|70|71|76|78|79|81)\d{6}$/.test(document.getElementById('inputPhone').value.replace(/\s+/g,''));
+            
+            check.style.display = valid ? 'block' : 'none';
+            btn.disabled = !valid;
         }
 
         function sendReport() {
-            const sendBtn = document.getElementById('sendBtn');
-            if (sendBtn.disabled) return;
-
+            // Data Gathering
+            const pName = localStorage.getItem('patientName') || "Unknown";
+            const pAge = localStorage.getItem('patientAge') || "?";
             const comment = document.getElementById('patientComment').value;
-            const filenameLabel = currentViewLabel.replace(/ /g, '_');
-            const pdfName = `Health_Report_${filenameLabel}.pdf`;
+            const med = document.getElementById('medInput').value || (currentLang==='en'?"None":"لا يوجد");
+            
+            let syms = [];
+            document.querySelectorAll('input[name="symptom"]:checked').forEach(cb => {
+                // Get the translated label text next to the checkbox
+                syms.push(cb.parentElement.querySelector('span').innerText);
+            });
+            const symStr = syms.length ? syms.join(', ') : (currentLang==='en'?"None":"لا يوجد");
+            
+            // Save Doctor if needed
+            if(document.getElementById('rememberMe').checked) {
+                localStorage.setItem('docEmail', document.getElementById('inputEmail').value);
+                localStorage.setItem('docPhone', document.getElementById('inputPhone').value);
+            }
 
-            // 1. GENERATE PDF
+            // PDF Generation
+            const dateStr = new Date().toISOString().slice(0,10);
+            const pdfName = `Health_Report_${pName}_${dateStr}.pdf`;
+            
+            // Create Title for Report
+            const reportTitle = currentLang==='en' 
+                ? `Health Report for ${pName} (Age: ${pAge})`
+                : `تقرير صحي للمريض: ${pName} (العمر: ${pAge})`;
+
+            // Modify DOM momentarily for PDF title capture (hack for html2pdf)
+            const oldTitle = document.getElementById('txt_title').innerText;
+            document.getElementById('txt_title').innerText = reportTitle;
+
+            // Handle Theme for PDF
+            const wasDark = document.body.classList.contains('dark-mode');
+            if(wasDark) toggleTheme();
+
             const element = document.body;
-            const opt = {
-                margin:       [10, 0, 10, 0],
-                filename:     pdfName,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2 },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
+            html2pdf().set({ margin: [10,0], filename: pdfName, html2canvas:{scale:2}, jsPDF:{unit:'mm', format:'a4'} }).from(element).save().then(() => {
+                // Restore State
+                document.getElementById('txt_title').innerText = oldTitle;
+                if(wasDark) toggleTheme();
 
-            html2pdf().set(opt).from(element).save().then(() => {
-                
-                // 2. PREPARE MESSAGE
-                let url = "";
-                const alertMsg = `The report for ${currentViewLabel} has been downloaded.\n\nPlease attach it to the message.`;
+                // Send Msg
+                let url="";
+                const body = currentLang==='en'
+                    ? `Patient: ${pName} (Age: ${pAge})\nView: ${currentViewLabel}\nSymptoms: ${symStr}\nMeds: ${med}\nNote: ${comment}\n(PDF Attached)`
+                    : `المريض: ${pName} (العمر: ${pAge})\nعرض: ${currentViewLabel}\nالأعراض: ${symStr}\nأدوية: ${med}\nملاحظة: ${comment}\n(مرفق PDF)`;
 
-                const subjectText = `Health Metrics Report - ${currentViewLabel}`;
-                const bodyText = `Here is my health report for ${currentViewLabel}.\n\nPatient Comment:\n${comment}\n\n(Please find the PDF attached)`;
+                const subject = currentLang==='en' ? `Health Report - ${pName}` : `تقرير صحي - ${pName}`;
 
-                if (currentMethod === 'gmail') {
-                    const email = document.getElementById('inputEmail').value.trim();
-                    const subject = encodeURIComponent(subjectText);
-                    const body = encodeURIComponent(bodyText);
-                    url = `mailto:${email}?subject=${subject}&body=${body}`;
-                    
-                } else if (currentMethod === 'whatsapp') {
-                    let phone = document.getElementById('inputPhone').value.replace(/\D/g, '');
-                    
-                    if (phone.startsWith('961')) {
-                        // Keep as is
-                    } else if (phone.startsWith('0')) {
-                        phone = '961' + phone.substring(1);
-                    } else {
-                        phone = '961' + phone;
-                    }
-
-                    const text = encodeURIComponent(`*${subjectText}*\n\nPatient Comment:\n${comment}\n\n(Please find the PDF attached)`);
-                    url = `https://wa.me/${phone}?text=${text}`;
+                if(currentMethod==='gmail') {
+                    url = `mailto:${document.getElementById('inputEmail').value}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                } else {
+                    let ph = document.getElementById('inputPhone').value.replace(/\D/g,'');
+                    if(ph.startsWith('0')) ph='961'+ph.substring(1); else if(!ph.startsWith('961')) ph='961'+ph;
+                    url = `https://wa.me/${ph}?text=${encodeURIComponent(body)}`;
                 }
-
-                alert(alertMsg);
                 window.open(url, '_blank');
             });
         }
+
+        // Init
+        window.onload = function() {
+            document.getElementById('datePicker').value = new Date().toISOString().split('T')[0];
+            handleDateChange();
+            loadProfile();
+            const sE=localStorage.getItem('docEmail'), sP=localStorage.getItem('docPhone');
+            if(sE) document.getElementById('inputEmail').value=sE;
+            if(sP) document.getElementById('inputPhone').value=sP;
+        };
     </script>
 </body>
 </html>
