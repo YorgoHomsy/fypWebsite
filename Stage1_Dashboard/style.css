@@ -1,3 +1,8 @@
+/* FIX: This forces ALL elements to keep their padding inside their 100% width */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
 :root {
     /* Tells the browser native popups (like the calendar) should be light */
     color-scheme: light; 
@@ -50,6 +55,7 @@ body {
     padding: 20px;
     transition: background 0.4s ease, color 0.4s ease;
     line-height: 1.6;
+    overflow-x: hidden; /* SAFETY LOCK: Prevents left/right scrolling */
 }
 
 /* --- ANIMATIONS --- */
