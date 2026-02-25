@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#842dcb">
+    <title>NEURIVA: Health Metrics Dashboard</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3063/3063176.png">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+</head>
+<body id="dashboardBody">
+    
+    <div id="toastMessage" class="toast">Profile Saved Successfully! ✨</div>
+
+    <div class="modal-overlay" id="profileModal">
+        <div class="modal-content">
+            <div class="modal-title" id="txt_modal_title">Your Profile</div>
+            <input type="text" id="profileName" class="profile-input" placeholder="First Name">
+            <input type="number" id="profileAge" class="profile-input" placeholder="Age" min="0" max="120">
+            
+            <select id="profileSex" class="profile-input">
+                <option value="" disabled selected id="txt_sel_sex">Select Sex</option>
+                <option value="Male" id="txt_sex_m">Male</option>
+                <option value="Female" id="txt_sex_f">Female</option>
+            </select>
+            
+            <button class="save-btn" onclick="saveProfile()" id="txt_modal_save">Save Changes</button>
+            <button class="method-btn" onclick="closeProfile()" style="width:100%; margin-top:10px; justify-content:center; background: transparent; border: none; box-shadow: none;" id="txt_modal_cancel">Close</button>
+        </div>
+    </div>
+
+    <div class="animate-up delay-1">
+        <div class="header-controls">
+            <div class="header-left">
+                <a href="tel:140" class="emergency-btn">
+                    🚑 <span id="txt_emergency">Emergency (140)</span>
+                </a>
+            </div>
+            
+            <div class="header-right">
+                <button class="icon-btn" onclick="openProfile()" title="Profile">👤 Profile</button>
+                <button class="icon-btn" onclick="toggleLang()" id="btn_lang">عربي</button>
+                <button class="icon-btn theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode">🌙</button>
+            </div>
+        </div>
+        
+        <h2 id="greetingText" class="greeting-text">Welcome back!</h2>
+        <h1 class="main-title" id="txt_title">NEURIVA</h1>
+        <p class="subtitle-text" id="txt_subtitle">Your Daily Health & Wellness Metrics</p>
+    </div>
+
+    <div class="nav-container animate-up delay-2">
+        <select id="viewModeSelect" class="profile-input" style="width: auto; margin-bottom: 0;" onchange="toggleViewMode()">
+            <option value="daily" id="txt_mode_daily">Daily Journal</option>
+            <option value="monthly" id="txt_mode_monthly">Monthly Trends</option>
+        </select>
+
+        <input type="date" id="datePicker" onchange="handleDateChange()" onclick="try{this.showPicker();}catch(e){}">
+        
+        <input type="month" id="monthPicker" style="display: none;" onchange="setMonthlyView()" onclick="try{this.showPicker();}catch(e){}">
+    </div>
+
+    <div class="controls-container animate-up delay-2" id="controlsPanel">
+        <label class="toggle-label">
+            <input type="checkbox" id="toggleBars" checked onchange="toggleLayers()"> <span id="txt_show_hist">Show Histograms</span>
+        </label>
+        <label class="toggle-label">
+            <input type="checkbox" id="toggleCurves" checked onchange="toggleLayers()"> <span id="txt_show_curves">Show Curves</span>
+        </label>
+    </div>
+
+    
+    <div class="charts-container animate-up delay-3">
+        <div class="chart-card">
+            <h2 id="txt_chart_ecg">ECG Flow (ms/mV)</h2>
+            <canvas id="ecgChart"></canvas>
+        </div>
+
+        <div class="chart-card">
+            <h2 id="txt_chart_hrt">Heart Rhythm (BPM)</h2>
+            <canvas id="hrtChart"></canvas>
+        </div>
+    </div>
+
+    <div class="contact-section animate-up delay-4">
+        <div class="contact-header" id="txt_contact_header">Share with Doctor</div>
+        
+        <label class="input-label" id="txt_symptoms">How are you feeling today?</label>
+        <div class="checklist-container">
+            <label class="checkbox-item"><input type="checkbox" name="symptom" value="Dizziness"><span class="lbl-sym">Dizzy</span></label>
+            <label class="checkbox-item"><input type="checkbox" name="symptom" value="Chest Pain"><span class="lbl-sym">Chest Pain</span></label>
+            <label class="checkbox-item"><input type="checkbox" name="symptom" value="Shortness of Breath"><span class="lbl-sym">Short Breath</span></label>
+            <label class="checkbox-item"><input type="checkbox" name="symptom" value="Palpitations"><span class="lbl-sym">Palpitations</span></label>
+            <label class="checkbox-item"><input type="checkbox" name="symptom" value="Fatigue"><span class="lbl-sym">Fatigued</span></label>
+            <label class="checkbox-item"><input type="checkbox" name="symptom" value="Nausea"><span class="lbl-sym">Nauseous</span></label>
+        </div>
+
+        <label class="input-label" id="txt_meds">Did you take any medication?</label>
+        <input type="text" id="medInput" class="med-input" placeholder="e.g., Aspirin, Vitamins">
+
+        <label class="input-label" id="txt_comments">Any other notes?</label>
+        <textarea id="patientComment" placeholder="I slept really well last night..."></textarea>
+
+        <div class="input-label" style="text-align:center; margin-top:10px;" id="txt_method">Select Contact Method:</div>
+        <div class="method-toggles">
+            <button class="method-btn" onclick="selectMethod('gmail', this)">📧 Email</button>
+            <button class="method-btn" onclick="selectMethod('whatsapp', this)">📱 WhatsApp</button>
+        </div>
+
+        <div class="input-group">
+            <input type="email" id="inputEmail" class="input-field" placeholder="Doctor's Email" oninput="validateInput()">
+            <input type="text" id="inputPhone" class="input-field" placeholder="Doctor's Mobile" oninput="validateInput()">
+            <span id="checkMark" class="validation-icon">✓</span>
+        </div>
+        
+        <label class="checkbox-item" style="margin-bottom:20px; font-weight:600; justify-content:center;">
+            <input type="checkbox" id="rememberMe"> <span id="txt_remember">Save doctor's contact for next time</span>
+        </label>
+
+        <button id="sendBtn" class="send-btn" onclick="sendReport()" disabled><span id="txt_send">Generate & Send Report</span></button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

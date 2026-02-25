@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEURIVA — Health Report</title>
+
+    <link rel="stylesheet" href="report_style.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+
+</head>
+
+<body>
+
+<div id="a4Page">
+    
+    <header class="header-grid">
+        <div class="doc-brand">
+            NEURIVA
+            <span>Clinical Monitoring System</span>
+        </div>
+        <div class="report-meta">
+            <div>Report Generated: <strong id="printDate"></strong></div>
+            <div>Ref ID: <strong id="reportID"></strong></div>
+            <div id="reportTypeBadge" class="badge">DAILY MONITOR</div>
+        </div>
+    </header>
+
+    <div class="demographics-bar">
+        <div class="demo-item">
+            <span class="demo-label">Patient Name</span>
+            <span class="demo-value" id="ptName">--</span>
+        </div>
+        <div class="demo-item">
+            <span class="demo-label">Age / Sex</span>
+            <span class="demo-value"><span id="ptAge">--</span> / <span id="ptSex">--</span></span>
+        </div>
+        <div class="demo-item">
+            <span class="demo-label">Data Source</span>
+            <span class="demo-value">Wearable Sensor</span>
+        </div>
+        <div class="demo-item">
+            <span class="demo-label">Record Date</span>
+            <span class="demo-value" id="recordDate">--</span>
+        </div>
+    </div>
+
+    <div class="section-title">Clinical Vitals Summary</div>
+    <div class="clinical-summary">
+        <div class="stat-box" id="boxAvgHrt">
+            <div class="stat-label">Avg Heart Rate</div>
+            <div class="stat-value"><span id="valAvgHrt">--</span> <span class="stat-unit">BPM</span></div>
+        </div>
+        <div class="stat-box" id="boxMaxHrt">
+            <div class="stat-label">Peak Heart Rate</div>
+            <div class="stat-value"><span id="valMaxHrt">--</span> <span class="stat-unit">BPM</span></div>
+        </div>
+        <div class="stat-box" id="boxAvgEcg">
+            <div class="stat-label">Avg ECG Potential</div>
+            <div class="stat-value"><span id="valAvgEcg">--</span> <span class="stat-unit">ms/mV</span></div>
+        </div>
+        <div class="stat-box" id="boxMeds">
+            <div class="stat-label">Current Medication</div>
+            <div class="stat-value" style="font-size:16px; margin-top:10px; line-height:1.2;" id="valMeds">None</div>
+        </div>
+    </div>
+
+    <div class="notes-grid">
+        <div>
+            <div class="section-title">Reported Symptoms</div>
+            <div id="symptomContainer"></div>
+        </div>
+        <div>
+            <div class="section-title">Patient Narrative / Notes</div>
+            <div class="narrative-text" id="ptNotes">
+                No additional comments provided by the patient.
+            </div>
+        </div>
+    </div>
+
+    <div class="chart-section avoid-break">
+        <div class="chart-header">
+            ELECTROCARDIOGRAM (ECG) ANALYSIS
+            <span class="chart-legend-custom">Bar: Snapshot Interval | Line: Trend</span>
+        </div>
+        <canvas id="ecgPdfChart" height="150" width="700"></canvas>
+    </div>
+
+    <div class="chart-section avoid-break">
+        <div class="chart-header">
+            HEART RATE TRACKING (HRT)
+            <span class="chart-legend-custom">Unit: Beats Per Minute (BPM)</span>
+        </div>
+        <canvas id="hrtPdfChart" height="150" width="700"></canvas>
+    </div>
+
+    <div class="doctor-notes-section avoid-break">
+        <div class="section-title">Physician Notes & Clinical Impressions</div>
+        <div class="doctor-notes-box"></div>
+    </div>
+
+    <footer class="report-footer avoid-break">
+        <div class="disclaimer-box">
+            <strong>Disclaimer:</strong> This report is generated based on patient-inputted data and remote sensor readings. 
+            Values are indicative and should be verified with clinical grade equipment.
+            <br><br>System Version: 2.1.0 | Neuriva Health
+        </div>
+        
+        <div class="signature-section">
+            <div class="sign-field">
+                <div class="sign-line line-date"></div>
+                <div class="sign-label">Date</div>
+            </div>
+            
+            <div class="sign-field">
+                <div class="sign-line line-doc"></div>
+                <div class="sign-label">Physician Signature & Stamp</div>
+            </div>
+        </div>
+    </footer>
+
+</div>
+
+<script src="report_script.js"></script>
+
+
+</body>
+</html>
