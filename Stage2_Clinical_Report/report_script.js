@@ -269,7 +269,7 @@ function generatePdf() {
         .save()
         .then(() => {
             restoreCharts(replacements);
-            setTimeout(() => window.close(), 500); 
+             
         });
 }
 
