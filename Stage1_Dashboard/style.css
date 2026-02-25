@@ -177,24 +177,54 @@ body {
 
 /* --- NAVIGATION & DATE PICKERS --- */
 .nav-container {
-    display: flex; justify-content: center; gap: 15px; margin-bottom: 25px;
-    background: var(--nav-bg); padding: 20px; border-radius: 16px;
-    box-shadow: 0 6px 15px var(--shadow); flex-wrap: wrap; align-items: center;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 25px;
+    background: var(--nav-bg);
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 6px 15px var(--shadow);
+    flex-wrap: wrap;
+    align-items: center;
     border: 1px solid var(--border-color);
 }
 
-input[type="date"], input[type="month"], select.profile-input {
-    padding: 14px; border: 2px solid var(--border-color); border-radius: 12px;
-    font-family: inherit; font-weight: 600; font-size: 1rem;
-    color: var(--text-color); background: var(--input-bg); cursor: pointer;
-    transition: all 0.2s;
-    appearance: none; -webkit-appearance: none;
-    background-image: url("data:image/svg+xml;utf8,<svg fill='%23842dcb' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
-    background-repeat: no-repeat; background-position: right 12px center; background-size: 18px; padding-right: 40px;
-    
-    /* THE FIX: Forces padding to stay inside the width boundaries */
-    box-sizing: border-box;
+.nav-container > * {
+    flex: 1 1 200px;
+    min-width: 0;   /* 🔥 allows shrinking */
+}
+
+input[type="date"],
+input[type="month"],
+select.profile-input {
+    width: 100%;              /* 🔥 CRITICAL FIX */
+    min-width: 0;             /* 🔥 Allows flex shrinking */
     max-width: 100%;
+
+    padding: 14px;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 1rem;
+
+    color: var(--text-color);
+    background: var(--input-bg);
+    cursor: pointer;
+    transition: all 0.2s;
+
+    appearance: none;
+    -webkit-appearance: none;
+
+    background-image: url("data:image/svg+xml;utf8,<svg fill='currentColor' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 18px;
+
+    padding-right: 40px;
+    box-sizing: border-box;
 }
 
 /* Hide the ugly native browser calendar icon to rely on our custom click logic */
@@ -312,14 +342,17 @@ body.rtl .validation-icon { left: 15px; }
     .nav-container { 
         flex-direction: column; 
         width: 100%; 
-        padding: 15px; 
+        padding: 15px;
+        align-items: stretch; /* FIX: Locks the left and right edges to the container */
+        gap: 15px; /* Replaces margin-bottom for cleaner spacing */
     }
     
     /* THE FIX: !important overrides inline HTML styles, and min-width: 0 forces the date picker to shrink */
-    .nav-container select, .nav-container input { 
-        width: 100% !important; 
-        min-width: 0 !important; 
-        margin-bottom: 10px !important;
+    .nav-container select,
+    .nav-container input {
+        width: 100% !important; /* Forces uniform width */
+        margin-bottom: 0 !important; /* Let the gap handle spacing */
+        flex: none; /* Resets the flex-basis height distortion from desktop */
     }
     
     .checklist-container { grid-template-columns: 1fr; }
