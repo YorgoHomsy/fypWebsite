@@ -1,4 +1,4 @@
-const CACHE_NAME = 'health-app-v3';
+const CACHE_NAME = 'health-app-v4';
 const ASSETS_TO_CACHE = [
     './index.html',
     './style.css',      // <-- ADD THIS

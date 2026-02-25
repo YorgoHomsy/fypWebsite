@@ -402,13 +402,36 @@ function sendReport() {
         localStorage.removeItem('docEmail'); localStorage.removeItem('docPhone');
     }
 
-    const msg = `Hello Doctor,\n\nPlease find my latest Health Report attached for ${repDate}.\nReport Ref ID: ${reportId}\n\n*Note: I will attach the PDF document to this message shortly.*\n\nRegards,\n${pName}`;
+const msg = `Hello Doctor,\n\nPlease find my latest Health Report attached for ${repDate}.\nReport Ref ID: ${reportId}\n\n*Note: I will attach the PDF document to this message shortly.*\n\nRegards,\n${pName}`;
     let appUrl = currentMethod === 'gmail' 
         ? `mailto:${document.getElementById('inputEmail').value}?subject=${encodeURIComponent("Patient Health Report - " + pName)}&body=${encodeURIComponent(msg)}`
         : `https://wa.me/${document.getElementById('inputPhone').value.replace(/\D/g,'').replace(/^0/, '961')}?text=${encodeURIComponent(msg)}`;
 
+    // 1. Open the PDF Generation in a new tab
     window.open("../Stage2_Clinical_Report/neuriva_report.html", "_blank");
-    setTimeout(() => { window.location.href = appUrl; }, 1000); // Slight delay for smooth UX
+
+    // 2. DO NOT REDIRECT AUTOMATICALLY. Change the button so the user is in control!
+    const btn = document.getElementById('sendBtn');
+    const platformName = currentMethod === 'gmail' ? 'Email' : 'WhatsApp';
+    const platformNameAr = currentMethod === 'gmail' ? 'الإيميل' : 'واتساب';
+    
+    btn.innerHTML = currentLang === 'en' ? `Step 2: Open ${platformName} ➔` : `الخطوة 2: فتح ${platformNameAr} ➔`;
+    btn.style.backgroundColor = "#27ae60"; // Turn it green to show it's a new step!
+
+    // 3. Change what the button does when clicked a second time
+    btn.onclick = function() {
+        window.location.href = appUrl; // Now it opens WhatsApp/Gmail
+        
+        // Reset the button back to normal after a few seconds
+        setTimeout(() => {
+            btn.innerHTML = currentLang === 'en' ? "Generate & Send Report" : "توليد وإرسال التقرير";
+            btn.style.backgroundColor = "var(--primary)";
+            btn.onclick = sendReport;
+        }, 3000);
+    };
+
+    // Show a helpful hint!
+    showToast(currentLang === 'en' ? "PDF opened! Save it, then click Step 2." : "تم فتح التقرير! احفظه ثم اضغط الخطوة 2.");
 }
 
 window.onload = function() {
@@ -422,3 +445,5 @@ window.onload = function() {
     document.querySelector('.theme-toggle').textContent = isDarkMode ? '☀️' : '🌙';
     if (isDarkMode) { updateChartTheme(ecgChartInstance); updateChartTheme(hrtChartInstance); };
 };
+
+
