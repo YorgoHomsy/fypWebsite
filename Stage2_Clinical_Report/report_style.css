@@ -218,9 +218,10 @@ h1, h2, h3 { margin: 0; color: var(--primary); }
 }
 
 @media screen and (max-width: 600px) {
-    #a4Page { width: 100%; height: auto; padding: 10px; margin: 0; box-shadow: none; overflow: visible; }
-    .clinical-summary { grid-template-columns: 1fr 1fr; }
-    .notes-grid { grid-template-columns: 1fr; }
-    .doctor-notes-box { min-height: 100px; }
-    .report-footer { flex-direction: column; gap: 30px; text-align: center; align-items: center; margin-top: 20px; }
+    /* Only apply mobile styles if the body DOES NOT have the 'exporting' class */
+    body:not(.exporting) #a4Page { width: 100%; height: auto; padding: 10px; margin: 0; box-shadow: none; overflow: visible; }
+    body:not(.exporting) .clinical-summary { grid-template-columns: 1fr 1fr; }
+    body:not(.exporting) .notes-grid { grid-template-columns: 1fr; }
+    body:not(.exporting) .doctor-notes-box { min-height: 100px; }
+    body:not(.exporting) .report-footer { flex-direction: column; gap: 30px; text-align: center; align-items: center; margin-top: 20px; }
 }

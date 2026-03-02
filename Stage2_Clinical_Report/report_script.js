@@ -226,21 +226,22 @@ function restoreCharts(replacements) {
 }
 
 function generatePdf() {
+    // 1. Force the page into "Desktop Mode" right before taking the snapshot
+    document.body.classList.add('exporting');
+
     const replacements = convertChartsToImages();
     
-    // 1. Get the Date
+    // Get the Date
     const sDate = localStorage.getItem('reportDate') || "Report";
     const safeDate = sDate.replace(/[^a-z0-9]/gi, '_'); 
     
-    // 2. Get Patient Name (Replace spaces with underscores for safe filenames)
+    // Get Patient Name 
     let pNameRaw = localStorage.getItem('patientName') || "Patient";
     const safeName = pNameRaw.replace(/\s+/g, '_');
     
-    // 3. Get Report Type (Daily vs Monthly)
+    // Get Report Type
     const rMode = localStorage.getItem('reportMode') === 'monthly' ? 'Monthly' : 'Daily';
 
-    // 4. Construct the Smart Clinical Filename
-    // Example: NEURIVA_Daily_Yorgo_El_Homsi_2026_02_25.pdf
     const finalFileName = `NEURIVA_${rMode}_${safeName}_${safeDate}.pdf`;
 
     const opt = {
@@ -250,7 +251,9 @@ function generatePdf() {
         html2canvas: {
             scale: 2, 
             useCORS: true,
-            scrollY: 0
+            scrollY: 0,
+            // 2. Tell the PDF engine to pretend the screen is an 800px wide desktop
+            windowWidth: 800
         },
         jsPDF: {
             unit: 'pt',
@@ -269,7 +272,9 @@ function generatePdf() {
         .save()
         .then(() => {
             restoreCharts(replacements);
-             
+            
+            // 3. Revert back to the normal mobile view after the PDF is safely generated
+            document.body.classList.remove('exporting');
         });
 }
 
